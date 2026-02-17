@@ -6,7 +6,6 @@
     <title>Колесо фортуны</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* все стили без изменений */
         body {
             margin: 0;
             padding: 16px;
@@ -84,6 +83,7 @@
             color: #ffd700;
             font-size: 18px;
             margin-top: 10px;
+            min-height: 40px;
         }
     </style>
 </head>
@@ -101,9 +101,11 @@
         tg.expand();
         tg.MainButton.hide();
 
+        // Параметр из URL (передаётся ботом)
         const urlParams = new URLSearchParams(window.location.search);
         const alreadySpun = urlParams.get('already_spun') === '1';
 
+        // Призы
         const prizes = [
             { name: "💅 Дизайн ногтей", color: '#FF6B6B' },
             { name: "🧴 СПА для рук/ног", color: '#4ECDC4' },
@@ -113,10 +115,12 @@
             { name: "👑 Депозит 10 000 руб.", color: '#DDA0DD' }
         ];
 
+        // Вероятности (сумма 100)
         const chances = [20, 20, 25, 20, 14, 1]; // Депозит 10000 - 1%
 
         const colors = prizes.map(p => p.color);
 
+        // Canvas
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
         const centerX = 200, centerY = 200, radius = 180;
@@ -140,6 +144,7 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
+                // Эмодзи приза
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(startAngle + (endAngle - startAngle) / 2);
@@ -152,6 +157,7 @@
                 ctx.restore();
             }
             
+            // Центральный круг
             ctx.beginPath();
             ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
             ctx.fillStyle = '#FFD700';
@@ -182,14 +188,15 @@
             const statusMsg = document.getElementById('statusMessage');
             statusMsg.innerText = 'Крутим...';
 
-            const spinDuration = 3000;
-            const spinAngle = 360 * 8;
+            const spinDuration = 3000; // 3 секунды
+            const spinAngle = 360 * 8; // 8 полных оборотов
             const startTime = Date.now();
             const startAngle = currentAngle;
 
             const targetPrizeIndex = getRandomPrizeIndex();
             
             const anglePerSector = 2 * Math.PI / prizes.length;
+            // Стрелка вверху (угол -90° = 3*PI/2). Подбираем угол так, чтобы центр сектора совпал со стрелкой.
             const targetAngle = (3 * Math.PI / 2) - (targetPrizeIndex + 0.5) * anglePerSector;
             const normalizedTarget = ((targetAngle % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
 
@@ -211,20 +218,21 @@
                     const wonPrize = prizes[targetPrizeIndex];
                     statusMsg.innerText = `Вы выиграли: ${wonPrize.name}! Перенаправляем...`;
                     
-                    // Отправляем данные боту и закрываем приложение через небольшую паузу
+                    // Отправляем данные боту и закрываем приложение
                     setTimeout(() => {
                         tg.sendData(JSON.stringify({ prize: wonPrize.name }));
                         tg.close();
                     }, 1500);
 
                     spinning = false;
-                    // Кнопку не включаем обратно, так как приложение закроется
+                    // Кнопка не включается, так как приложение закроется
                 }
             }
 
             requestAnimationFrame(animateSpin);
         }
 
+        // Отрисовка начального состояния
         drawWheel(currentAngle);
 
         const spinBtn = document.getElementById('spinButton');
