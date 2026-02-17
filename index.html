@@ -75,16 +75,6 @@
             margin-top: 10px;
             min-height: 40px;
         }
-        .debug {
-            color: #aaa;
-            font-size: 12px;
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: rgba(0,0,0,0.5);
-            padding: 8px;
-            border-radius: 4px;
-            max-width: 300px;
-        }
     </style>
 </head>
 <body>
@@ -95,23 +85,15 @@
     </div>
     <button class="spin-btn" id="spinButton">Крутить!</button>
     <div class="message" id="statusMessage"></div>
-    <div class="debug" id="debug"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.MainButton.hide();
 
-        // Отладка
-        function debugLog(msg) {
-            const debugDiv = document.getElementById('debug');
-            debugDiv.innerText += msg + '\n';
-            console.log(msg);
-        }
-
         const urlParams = new URLSearchParams(window.location.search);
         const alreadySpun = urlParams.get('already_spun') === '1';
-        debugLog(`alreadySpun: ${alreadySpun}`);
+        console.log('alreadySpun:', alreadySpun);
 
         const prizes = [
             { name: "💅 Дизайн ногтей", color: '#FF6B6B' },
@@ -122,7 +104,7 @@
             { name: "👑 Депозит 10 000 руб.", color: '#DDA0DD' }
         ];
 
-        const chances = [20, 20, 25, 20, 14, 1]; // Сумма 100
+        const chances = [20, 20, 25, 20, 14, 1];
 
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
@@ -186,7 +168,7 @@
             spinning = true;
             document.getElementById('spinButton').disabled = true;
             document.getElementById('statusMessage').innerText = 'Крутим...';
-            debugLog('Начали вращение');
+            console.log('Начали вращение');
 
             const spinDuration = 3000;
             const spinAngle = 360 * 8;
@@ -195,7 +177,7 @@
 
             const targetPrizeIndex = getRandomPrizeIndex();
             wonPrize = prizes[targetPrizeIndex];
-            debugLog(`Выбран приз: ${wonPrize.name}`);
+            console.log('Выбран приз:', wonPrize.name);
             
             const anglePerSector = 2 * Math.PI / prizes.length;
             const targetAngle = (3 * Math.PI / 2) - (targetPrizeIndex + 0.5) * anglePerSector;
@@ -217,15 +199,15 @@
                     drawWheel(currentAngle);
                     
                     document.getElementById('statusMessage').innerText = `Вы выиграли: ${wonPrize.name}!`;
-                    debugLog(`Остановились, приз: ${wonPrize.name}`);
+                    console.log('Остановились, приз:', wonPrize.name);
 
                     // Настраиваем и показываем MainButton
                     tg.MainButton.setText("Получить подарок");
                     tg.MainButton.show();
                     tg.MainButton.onClick(function() {
-                        debugLog('Нажата MainButton, отправляем данные');
+                        console.log('Нажата MainButton, отправляем данные');
                         tg.sendData(JSON.stringify({ prize: wonPrize.name }));
-                        debugLog('Данные отправлены, закрываем через 500ms');
+                        console.log('Данные отправлены, закрываем через 500ms');
                         setTimeout(() => tg.close(), 500);
                     });
 
@@ -244,7 +226,7 @@
         if (alreadySpun) {
             spinBtn.disabled = true;
             statusMsg.innerText = 'Вы уже участвовали в розыгрыше. Ожидайте звонка администратора.';
-            debugLog('Пользователь уже крутил');
+            console.log('Пользователь уже крутил');
         } else {
             spinBtn.addEventListener('click', spinWheel);
         }
