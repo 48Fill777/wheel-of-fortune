@@ -16,7 +16,6 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            box-sizing: border-box;
             color: white;
         }
         h1 {
@@ -24,7 +23,6 @@
             margin: 0 0 20px 0;
             font-size: 28px;
             color: #ffd700;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         .wheel-container {
             position: relative;
@@ -48,7 +46,6 @@
             border-left: 20px solid transparent;
             border-right: 20px solid transparent;
             border-top: 40px solid #ff4444;
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
             z-index: 10;
         }
         .spin-btn {
@@ -62,20 +59,13 @@
             margin: 30px 0 20px;
             box-shadow: 0 8px 0 #b22222, 0 10px 20px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: all 0.1s ease;
             width: 100%;
             max-width: 300px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        .spin-btn:active {
-            transform: translateY(8px);
-            box-shadow: 0 0 0 #b22222, 0 5px 15px rgba(0,0,0,0.3);
         }
         .spin-btn:disabled {
             opacity: 0.6;
             transform: translateY(5px);
-            box-shadow: 0 3px 0 #b22222;
             cursor: not-allowed;
         }
         .message {
@@ -84,6 +74,20 @@
             font-size: 18px;
             margin-top: 10px;
             min-height: 40px;
+        }
+        .send-btn {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
+            display: none;
         }
     </style>
 </head>
@@ -95,17 +99,16 @@
     </div>
     <button class="spin-btn" id="spinButton">Крутить!</button>
     <div class="message" id="statusMessage"></div>
+    <button class="send-btn" id="sendButton">Получить подарок</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.MainButton.hide();
 
-        // Параметр из URL (передаётся ботом)
         const urlParams = new URLSearchParams(window.location.search);
         const alreadySpun = urlParams.get('already_spun') === '1';
 
-        // Призы
         const prizes = [
             { name: "💅 Дизайн ногтей", color: '#FF6B6B' },
             { name: "🧴 СПА для рук/ног", color: '#4ECDC4' },
@@ -115,18 +118,15 @@
             { name: "👑 Депозит 10 000 руб.", color: '#DDA0DD' }
         ];
 
-        // Вероятности (сумма 100)
-        const chances = [20, 20, 25, 20, 14, 1]; // Депозит 10000 - 1%
+        const chances = [20, 20, 25, 20, 14, 1];
 
-        const colors = prizes.map(p => p.color);
-
-        // Canvas
         const canvas = document.getElementById('wheelCanvas');
         const ctx = canvas.getContext('2d');
         const centerX = 200, centerY = 200, radius = 180;
 
         let currentAngle = 0;
         let spinning = false;
+        let wonPrize = null;
 
         function drawWheel(angle = 0) {
             ctx.clearRect(0, 0, 400, 400);
@@ -138,13 +138,12 @@
                 ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, startAngle, endAngle);
                 ctx.closePath();
-                ctx.fillStyle = colors[i % colors.length];
+                ctx.fillStyle = prizes[i].color;
                 ctx.fill();
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Эмодзи приза
                 ctx.save();
                 ctx.translate(centerX, centerY);
                 ctx.rotate(startAngle + (endAngle - startAngle) / 2);
@@ -157,7 +156,6 @@
                 ctx.restore();
             }
             
-            // Центральный круг
             ctx.beginPath();
             ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
             ctx.fillStyle = '#FFD700';
@@ -174,9 +172,7 @@
             let cumulative = 0;
             for (let i = 0; i < chances.length; i++) {
                 cumulative += chances[i];
-                if (rand < cumulative) {
-                    return i;
-                }
+                if (rand < cumulative) return i;
             }
             return chances.length - 1;
         }
@@ -185,18 +181,18 @@
             if (spinning) return;
             spinning = true;
             document.getElementById('spinButton').disabled = true;
-            const statusMsg = document.getElementById('statusMessage');
-            statusMsg.innerText = 'Крутим...';
+            document.getElementById('sendButton').style.display = 'none';
+            document.getElementById('statusMessage').innerText = 'Крутим...';
 
-            const spinDuration = 3000; // 3 секунды
-            const spinAngle = 360 * 8; // 8 полных оборотов
+            const spinDuration = 3000;
+            const spinAngle = 360 * 8;
             const startTime = Date.now();
             const startAngle = currentAngle;
 
             const targetPrizeIndex = getRandomPrizeIndex();
+            wonPrize = prizes[targetPrizeIndex];
             
             const anglePerSector = 2 * Math.PI / prizes.length;
-            // Стрелка вверху (угол -90° = 3*PI/2). Подбираем угол так, чтобы центр сектора совпал со стрелкой.
             const targetAngle = (3 * Math.PI / 2) - (targetPrizeIndex + 0.5) * anglePerSector;
             const normalizedTarget = ((targetAngle % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
 
@@ -215,27 +211,26 @@
                     currentAngle = normalizedTarget;
                     drawWheel(currentAngle);
                     
-                    const wonPrize = prizes[targetPrizeIndex];
-                    statusMsg.innerText = `Вы выиграли: ${wonPrize.name}! Перенаправляем...`;
-                    
-                    // Отправляем данные боту и закрываем приложение
-                    setTimeout(() => {
-                        tg.sendData(JSON.stringify({ prize: wonPrize.name }));
-                        tg.close();
-                    }, 1500);
-
+                    document.getElementById('statusMessage').innerText = `Вы выиграли: ${wonPrize.name}!`;
+                    document.getElementById('sendButton').style.display = 'block';
                     spinning = false;
-                    // Кнопка не включается, так как приложение закроется
                 }
             }
 
             requestAnimationFrame(animateSpin);
         }
 
-        // Отрисовка начального состояния
+        function sendResult() {
+            if (wonPrize) {
+                tg.sendData(JSON.stringify({ prize: wonPrize.name }));
+                tg.close();
+            }
+        }
+
         drawWheel(currentAngle);
 
         const spinBtn = document.getElementById('spinButton');
+        const sendBtn = document.getElementById('sendButton');
         const statusMsg = document.getElementById('statusMessage');
 
         if (alreadySpun) {
@@ -243,6 +238,7 @@
             statusMsg.innerText = 'Вы уже участвовали в розыгрыше. Ожидайте звонка администратора.';
         } else {
             spinBtn.addEventListener('click', spinWheel);
+            sendBtn.addEventListener('click', sendResult);
         }
     </script>
 </body>
